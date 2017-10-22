@@ -10,10 +10,14 @@ if (elementsPanel) {
 // The function below is executed in the context of the inspected page.
 function getPanelContents() {
   const ng = window.ng;
-  let panelContent = {};
-  if (ng && $0 && ng.probe($0)) {
-    panelContent = ng.probe($0).componentInstance;
-    console.log('test', ng.probe($0));
+  const angular = window.angular;
+  let panelContent = Object.create(null);
+  if ($0) {
+    if (ng && ng.probe($0)) {
+      panelContent = ng.probe($0).componentInstance;
+    } else if (angular) {
+      panelContent = angular.element($0).scope();
+    }
   }
   return panelContent;
 }
