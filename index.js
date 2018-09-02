@@ -15,6 +15,11 @@ function getPanelContents() {
   if ($0) {
     if (ng && ng.probe($0)) {
       panelContent = ng.probe($0).componentInstance;
+      // Properties added with defineProperty are shown in a light red color
+      if (ng.probe($0).context && Object.keys(ng.probe($0).context).length) {
+        Object.defineProperty(panelContent, '__context', {value: ng.probe($0).context});
+      }
+      Object.defineProperty(panelContent, '__debugInfo', {value: ng.probe($0)});
     } else if (angular) {
       panelContent = angular.element($0).scope();
     }
