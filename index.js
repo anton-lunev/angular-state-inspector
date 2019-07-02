@@ -13,12 +13,12 @@ function getPanelContents() {
   const ng = window.ng;
   let panelContent;
 
-  if (window.angular) { // AngularJs
-    panelContent = getAngularJsContent(window.angular);
-  } else if (ng && ng.probe && ng.probe($0)) { // Angular 2+
+  if (ng && ng.probe && ng.probe($0)) { // Angular 2+
     panelContent = getAngularContent(ng);
   } else if (ng && !ng.probe) { // Angular ivy
     panelContent = getAngularIvyContent(ng);
+  } else if (window.angular) { // AngularJs
+    panelContent = getAngularJsContent(window.angular);
   } else if (window.getAllAngularRootElements) {
     return 'Angular is running in production mode.';
   }
