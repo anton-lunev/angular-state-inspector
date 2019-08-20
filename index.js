@@ -15,8 +15,8 @@ function getPanelContents() {
 
   if (ng && ng.probe && ng.probe($0)) { // Angular 2+
     panelContent = getAngularContent(ng);
-  } else if (ng && !ng.probe) { // Angular ivy
-    panelContent = getAngularIvyContent(ng);
+  } else if (window.ngDevMode) { // Angular ivy
+    panelContent = getAngularIvyContent();
   } else if (window.angular) { // AngularJs
     panelContent = getAngularJsContent(window.angular);
   } else if (window.getAllAngularRootElements) {
@@ -38,14 +38,14 @@ function getPanelContents() {
     return res;
   }
 
-  function getAngularIvyContent(ng) {
+  function getAngularIvyContent() {
     let el = $0;
-    while (!el.__ngContext__) el = $0.parentNode;
-    if (!ng.getContext && el && !window.ivyWarningShown) {
-      console.info("Public debug api is not enabled in Ivy yet. To enable it manually import {publishDefaultGlobalUtils} from '@angular/core' and invoke it in dev mode.");
-      window.__ivyWarningShown__ = true;
+    while (!el.__ngContext__) {
+      el = el.parentNode;
+      if (!el) break;
     }
-    if (el) return clone(el.__ngContext__.debug.context);
+    // TODO: ng and ng.probe were removed in ivy, wait for the official public dev api.
+    return el ? clone(el.__ngContext__.debug.context) : Object.create(null);
   }
 
   function getAngularJsContent(angular) {
