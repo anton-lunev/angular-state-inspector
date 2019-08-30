@@ -11,12 +11,13 @@ if (elementsPanel) {
 function getPanelContents() {
   if (!$0) return;
   const ng = window.ng;
+  const ivyContext = getClosestIvyContext();
   let panelContent;
 
   if (ng && ng.probe && ng.probe($0)) { // Angular 2+
     panelContent = getAngularContent(ng);
-  } else if (window.ngDevMode) { // Angular ivy
-    panelContent = getAngularIvyContent();
+  } else if (ivyContext) { // Angular ivy
+    panelContent = getAngularIvyContent(ivyContext);
   } else if (window.angular) { // AngularJs
     panelContent = getAngularJsContent(window.angular);
   } else if (window.getAllAngularRootElements) {
@@ -38,12 +39,16 @@ function getPanelContents() {
     return res;
   }
 
-  function getAngularIvyContent() {
+  function getClosestIvyContext() {
     let el = $0;
     while (!el.__ngContext__) {
       el = el.parentNode;
       if (!el) break;
     }
+    return el;
+  }
+
+  function getAngularIvyContent(el) {
     // TODO: ng and ng.probe were removed in ivy, wait for the official public dev api.
     return el ? clone(el.__ngContext__.debug.context) : Object.create(null);
   }
