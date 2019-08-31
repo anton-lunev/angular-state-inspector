@@ -58,21 +58,30 @@ function getPanelContents() {
   }
 
   function getDetectChanges(panelContent) {
-    if (!panelContent.$debugInfo) return;
-    return () => panelContent.$debugInfo._debugInfo._view.changeDetectorRef.detectChanges();
+    return () => {
+      if (window.angular) {
+        try {
+          angular.element($0).scope().$applyAsync();
+        } catch (e) {
+          console.error("Something went wrong. Couldn't run digest.", e);
+        }
+      } else if (panelContent.$debugInfo) {
+        panelContent.$debugInfo._debugInfo._view.changeDetectorRef.detectChanges();
+      } else {
+        console.error("Couldn't find change detection api.");
+      }
+    }
   }
 
   function exportToWindow(scope) {
     window.$scope = window.$context = scope;
-    window.$detectChanges = window.$tick = getDetectChanges(scope);
+    window.$detectChanges = window.$tick = window.$apply = getDetectChanges(scope);
 
     if (window.__shortcutsShown__) return;
     console.log('\n\n');
     console.log('%cAngular state inspector shortcuts:', 'color: #ff5252; font-weight: bold;');
     console.log(`%c  $scope/$context: %cElement debug info`, 'color: #ff5252; font-weight: bold;', 'color: #1976d2');
-    if (window.$detectChanges) {
-      console.log(`%c  $getDetectChanges()/$tick(): %cTrigger change detection cycle`, 'color: #ff5252', 'color: #1976d2');
-    }
+    console.log(`%c  $getDetectChanges()/$tick()/$apply(): %cTrigger change detection cycle`, 'color: #ff5252', 'color: #1976d2');
     console.log('\n\n');
     window.__shortcutsShown__ = true;
   }
