@@ -59,14 +59,14 @@ function getPanelContents() {
 
   function getDetectChanges(panelContent) {
     return () => {
-      if (window.angular) {
+      if (panelContent.$debugInfo) {
+        panelContent.$debugInfo._debugInfo._view.changeDetectorRef.detectChanges();
+      } else if (window.angular) {
         try {
           angular.element($0).scope().$applyAsync();
         } catch (e) {
           console.error("Something went wrong. Couldn't run digest.", e);
         }
-      } else if (panelContent.$debugInfo) {
-        panelContent.$debugInfo._debugInfo._view.changeDetectorRef.detectChanges();
       } else {
         console.error("Couldn't find change detection api.");
       }
