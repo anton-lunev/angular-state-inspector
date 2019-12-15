@@ -32,9 +32,9 @@ function getPanelContents() {
     const res = clone(probe.componentInstance);
     // Properties added with defineProperty are shown in a light red color
     if (probe.context && Object.keys(probe.context).length) {
-      Object.defineProperty(res, '$context', {value: probe.context});
+      Object.defineProperty(res, '$context', {value: probe.context, enumerable: false});
     }
-    Object.defineProperty(res, '$debugInfo', {value: probe});
+    Object.defineProperty(res, '$debugInfo', {value: probe, enumerable: false});
 
     return res;
   }
@@ -59,8 +59,15 @@ function getPanelContents() {
 
   function getDetectChanges(panelContent) {
     return () => {
-      if (panelContent.$debugInfo) {
+      if (panelContent.$debugInfo._debugInfo) {
+        // Angular 2
         panelContent.$debugInfo._debugInfo._view.changeDetectorRef.detectChanges();
+      } else if (ng.coreTokens) {
+        // Angular 4+
+        const ngZone = panelContent.$debugInfo.injector.get(ng.coreTokens.NgZone);
+        ngZone.run(() => {
+          updateComponentState(panelContent);
+        });
       } else if (window.angular) {
         try {
           angular.element($0).scope().$applyAsync();
@@ -71,6 +78,14 @@ function getPanelContents() {
         console.error("Couldn't find change detection api.");
       }
     }
+  }
+
+  function updateComponentState(scope) {
+    Object.keys(scope).forEach((prop) => {
+      if (scope[prop] !== scope.$context[prop]) {
+        scope.$context[prop] = scope[prop];
+      }
+    })
   }
 
   function exportToWindow(scope) {
