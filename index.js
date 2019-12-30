@@ -10,15 +10,22 @@ if (elementsPanel) {
 // The function below is executed in the context of the inspected page.
 function getPanelContents() {
   if (!$0) return;
+  let isAngular = false;
+  let isAngularJs = false;
+  let isAngularIvy = false;
+
   const ng = window.ng;
   const ivyContext = getClosestIvyContext();
   let panelContent;
 
   if (ng && ng.probe && ng.probe($0)) { // Angular 2+
+    isAngular = true;
     panelContent = getAngularContent(ng);
   } else if (ivyContext) { // Angular ivy
+    isAngularIvy = true;
     panelContent = getAngularIvyContent(ivyContext);
   } else if (window.angular) { // AngularJs
+    isAngularJs = true;
     panelContent = getAngularJsContent(window.angular);
   } else if (window.getAllAngularRootElements) {
     return 'Angular is running in production mode.';
@@ -88,13 +95,29 @@ function getPanelContents() {
     })
   }
 
+  function findCtrl(scope) {
+    if (scope && scope.$ctrl) {
+      return scope.$ctrl;
+    } else if (scope && scope.$parent) {
+      return findCtrl(scope.$parent);
+    } else {
+      return null;
+    }
+  }
+
   function exportToWindow(scope) {
+    if (isAngularJs) {
+      window.$ctrl = findCtrl(scope);
+    }
     window.$scope = window.$context = scope;
     window.$detectChanges = window.$tick = window.$apply = getDetectChanges(scope);
 
     if (window.__shortcutsShown__) return;
     console.log('\n\n');
     console.log('%cAngular state inspector shortcuts:', 'color: #ff5252; font-weight: bold;');
+    if (isAngularJs) {
+      console.log(`%c  $ctrl: %cComponent $ctrl property`, 'color: #ff5252; font-weight: bold;', 'color: #1976d2');
+    }
     console.log(`%c  $scope/$context: %cElement debug info`, 'color: #ff5252; font-weight: bold;', 'color: #1976d2');
     console.log(`%c  $getDetectChanges()/$tick()/$apply(): %cTrigger change detection cycle`, 'color: #ff5252', 'color: #1976d2');
     console.log('\n\n');
