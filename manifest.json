@@ -6,8 +6,8 @@
   "devtools_page": "index.html",
   "author" : "Anton Lunev",
   "icons": {
-    "16": "img/logo-16.png",
-    "48": "img/logo-48.png",
-    "128": "img/logo-128.png"
+    "16": "img/angular-16.png",
+    "48": "img/angular-48.png",
+    "128": "img/angular-128.png"
   }
 }
