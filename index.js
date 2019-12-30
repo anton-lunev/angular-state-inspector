@@ -56,8 +56,17 @@ function getPanelContents() {
   }
 
   function getAngularIvyContent(el) {
-    // TODO: ng and ng.probe were removed in ivy, wait for the official public dev api.
-    return el ? clone(el.__ngContext__.debug.context) : Object.create(null);
+    try {
+      const res = clone(ng.getViewComponent(el) || ng.getComponent(el));
+      const context = ng.getContext(el);
+      if (context && Object.keys(context).length) {
+        Object.defineProperty(res, '$context', {value: context, enumerable: false});
+      }
+      return res;
+    } catch {
+      // @deprecated
+      return el ? clone(el.__ngContext__.debug.context) : Object.create(null);
+    }
   }
 
   function getAngularJsContent(angular) {
@@ -116,9 +125,9 @@ function getPanelContents() {
     console.log('\n\n');
     console.log('%cAngular state inspector shortcuts:', 'color: #ff5252; font-weight: bold;');
     if (isAngularJs) {
-      console.log(`%c  $ctrl: %cComponent $ctrl property`, 'color: #ff5252; font-weight: bold;', 'color: #1976d2');
+      console.log(`%c  $ctrl: %cComponent $ctrl property`, 'color: #ff5252;', 'color: #1976d2');
     }
-    console.log(`%c  $scope/$context: %cElement debug info`, 'color: #ff5252; font-weight: bold;', 'color: #1976d2');
+    console.log(`%c  $scope/$context: %cElement debug info`, 'color: #ff5252;', 'color: #1976d2');
     console.log(`%c  $getDetectChanges()/$tick()/$apply(): %cTrigger change detection cycle`, 'color: #ff5252', 'color: #1976d2');
     console.log('\n\n');
     window.__shortcutsShown__ = true;
