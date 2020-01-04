@@ -30,7 +30,9 @@ function getPanelContents() {
   } else if (window.getAllAngularRootElements) {
     return 'Angular is running in production mode.';
   }
-  exportToWindow(panelContent);
+  if (panelContent) {
+    exportToWindow(panelContent);
+  }
 
   return panelContent;
 
