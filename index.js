@@ -10,64 +10,103 @@ if (elementsPanel) {
 // The function below is executed in the context of the inspected page.
 function getPanelContents() {
   if (!$0) return;
+  const ng = window.ng;
   let isAngular = false;
   let isAngularJs = false;
   let isAngularIvy = false;
 
-  const ng = window.ng;
-  const ivyContext = getClosestIvyContext();
-  let panelContent;
+  const panelContent = getPanelContent();
 
-  if (ng && ng.probe && ng.probe($0)) { // Angular 2+
-    isAngular = true;
-    panelContent = getAngularContent(ng);
-  } else if (ivyContext) { // Angular ivy
-    isAngularIvy = true;
-    panelContent = getAngularIvyContent(ivyContext);
-  } else if (window.angular) { // AngularJs
-    isAngularJs = true;
-    panelContent = getAngularJsContent(window.angular);
-  } else if (window.getAllAngularRootElements) {
-    return 'Angular is running in production mode.';
-  }
   if (panelContent) {
     exportToWindow(panelContent);
+  } else {
+    return 'Cannot retrieve angular state';
   }
 
   return panelContent;
 
+
+  function getPanelContent() {
+    let _panelContent;
+    try {
+      if (isAngularContext()) { // Angular 2+
+        _panelContent = getAngularContent(ng);
+        isAngular = true;
+      } else if (isAngularIvyContext()) { // Angular ivy
+        _panelContent = getAngularIvyContent();
+        isAngularIvy = true;
+      } else if (isAngularJsContext()) { // AngularJs
+        _panelContent = getAngularJsContent(window.angular);
+        isAngularJs = true;
+      }
+    } catch {
+      /* proceed */
+    }
+    return _panelContent;
+  }
+
+  /** @returns {boolean} */
+  function isAngularContext() {
+    try {
+      return !!ng.probe($0);
+    } catch {
+      return false;
+    }
+  }
+
+  /** @returns {boolean} */
+  function isAngularIvyContext() {
+    try {
+      return !!ng.getContext($0);
+    } catch {
+      return false;
+    }
+  }
+
+  /** @returns {boolean} */
+  function isAngularJsContext() {
+    try {
+      return !!window.angular.element($0).scope()
+    } catch {
+      return false;
+    }
+  }
+
+  function parseNgMajorVersion() {
+    if (window.getAllAngularRootElements) {
+      const rootElements = getAllAngularRootElements();
+      if (rootElements && rootElements[0]) {
+        const versionString = rootElements[0].getAttribute('ng-version');
+        return versionString.split('.')[0];
+      }
+    } else if (window.angular) {
+      return 1;
+    }
+  }
+
   function getAngularContent(ng) {
     const probe = ng.probe($0);
     const res = clone(probe.componentInstance);
-    // Properties added with defineProperty are shown in a light red color
-    if (probe.context && Object.keys(probe.context).length) {
-      Object.defineProperty(res, '$context', {value: probe.context, enumerable: false});
-    }
-    Object.defineProperty(res, '$debugInfo', {value: probe, enumerable: false});
+    addStateProp(res, '$context', probe.context);
+    addStateProp(res, '$debugInfo', probe);
 
     return res;
   }
 
-  function getClosestIvyContext() {
+  function getAngularIvyContent() {
     let el = $0;
-    while (!el.__ngContext__) {
-      el = el.parentNode;
-      if (!el) break;
-    }
-    return el;
+    const res = clone(ng.getOwningComponent(el) || ng.getComponent(el));
+    addStateProp(res, '$context', ng.getContext(el));
+    addStateProp(res, '$directives', ng.getDirectives(el));
+    addStateProp(res, '$listeners', ng.getListeners(el));
+
+    return res;
   }
 
-  function getAngularIvyContent(el) {
-    try {
-      const res = clone(ng.getViewComponent(el) || ng.getComponent(el));
-      const context = ng.getContext(el);
-      if (context && Object.keys(context).length) {
-        Object.defineProperty(res, '$context', {value: context, enumerable: false});
-      }
-      return res;
-    } catch {
-      // @deprecated
-      return el ? clone(el.__ngContext__.debug.context) : Object.create(null);
+  function addStateProp(state, name, value) {
+    if (value && Object.keys(value).length) {
+      // Properties added with defineProperty are shown in a light red color
+      Object.defineProperty(state, name, {value, enumerable: false});
     }
   }
 
@@ -77,20 +116,23 @@ function getPanelContents() {
 
   function getDetectChanges(panelContent) {
     return () => {
-      if (panelContent.$debugInfo._debugInfo) {
+      if (isAngularIvy && ng.applyChanges) {
+        // Angular 9+
+        ng.applyChanges(ng.getOwningComponent($0) || ng.getComponent($0));
+      } else if (isAngular && panelContent.$debugInfo._debugInfo) {
         // Angular 2
         panelContent.$debugInfo._debugInfo._view.changeDetectorRef.detectChanges();
-      } else if (ng.coreTokens) {
+      } else if (isAngular && ng.coreTokens) {
         // Angular 4+
         const ngZone = panelContent.$debugInfo.injector.get(ng.coreTokens.NgZone);
         ngZone.run(() => {
           updateComponentState(panelContent);
         });
-      } else if (window.angular) {
+      } else if (isAngularJs && window.angular) {
         try {
           angular.element($0).scope().$applyAsync();
         } catch (e) {
-          console.error("Something went wrong. Couldn't run digest.", e);
+          console.error("Something went wrong. Couldn't run change detection.", e);
         }
       } else {
         console.error("Couldn't find change detection api.");
@@ -120,8 +162,9 @@ function getPanelContents() {
     if (isAngularJs) {
       window.$ctrl = findCtrl(scope);
     }
-    window.$scope = window.$context = scope;
-    window.$detectChanges = window.$tick = window.$apply = getDetectChanges(scope);
+    // TODO: add getter that retrieve always fresh version of state.
+    window.$state = window.$scope = window.$context = scope;
+    window.$apply = window.$detectChanges = window.$applyChanges = getDetectChanges(scope);
 
     if (window.__shortcutsShown__) return;
     console.log('\n\n');
@@ -129,8 +172,11 @@ function getPanelContents() {
     if (isAngularJs) {
       console.log(`%c  $ctrl: %cComponent $ctrl property`, 'color: #ff5252;', 'color: #1976d2');
     }
-    console.log(`%c  $scope/$context: %cElement debug info`, 'color: #ff5252;', 'color: #1976d2');
-    console.log(`%c  $getDetectChanges()/$tick()/$apply(): %cTrigger change detection cycle`, 'color: #ff5252', 'color: #1976d2');
+    console.log(`%c  $state/$scope/$context: %cElement debug info`, 'color: #ff5252;', 'color: #1976d2');
+    console.log(
+      `%c  $apply/$applyChanges(): %cTrigger change detection cycle`,
+      'color: #ff5252', 'color: #1976d2'
+    );
     console.log('\n\n');
     window.__shortcutsShown__ = true;
   }
