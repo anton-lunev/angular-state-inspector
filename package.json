@@ -1,0 +1,23 @@
+{
+  "name": "angular-state",
+  "version": "1.0.0",
+  "description": "An extension that lets you inspect the state of components.",
+  "main": "index.js",
+  "scripts": {
+    "zip": "mkdir -p dist && rimraf dist/* && bestzip dist/bundle.zip index.js index.html manifest.json img/icons/*"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anton-lunev/angular-state-inspector.git"
+  },
+  "author": "anton-lunev",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/anton-lunev/angular-state-inspector/issues"
+  },
+  "homepage": "https://github.com/anton-lunev/angular-state-inspector#readme",
+  "devDependencies": {
+    "bestzip": "^2.1.5",
+    "rimraf": "^3.0.2"
+  }
+}

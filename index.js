@@ -162,8 +162,13 @@ function getPanelContents() {
     if (isAngularJs) {
       window.$ctrl = findCtrl(scope);
     }
-    // TODO: add getter that retrieve always fresh version of state.
-    window.$state = window.$scope = window.$context = scope;
+
+    ['$state', '$scope', '$context'].forEach(method =>
+      Object.defineProperty(window, method, {
+        get() {
+          return getPanelContent();
+        }
+      }));
     window.$apply = window.$detectChanges = window.$applyChanges = getDetectChanges(scope);
 
     if (window.__shortcutsShown__) return;

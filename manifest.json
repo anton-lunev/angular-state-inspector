@@ -2,12 +2,12 @@
   "manifest_version": 2,
   "name": "Angular state inspector",
   "description": "Helps you debug Angular component state. Supports Angular 1/2+/Ivy!",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "devtools_page": "index.html",
   "author" : "Anton Lunev",
   "icons": {
-    "16": "img/angular-16.png",
-    "48": "img/angular-48.png",
-    "128": "img/angular-128.png"
+    "16": "img/icons/angular-16.png",
+    "48": "img/icons/angular-48.png",
+    "128": "img/icons/angular-128.png"
   }
 }
