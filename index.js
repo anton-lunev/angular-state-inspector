@@ -15,15 +15,16 @@ function getPanelContents() {
   let isAngularJs = false;
   let isAngularIvy = false;
 
-  const panelContent = getPanelContent();
+  /** @typedef {{panelState: object, previousPanelState: object, originalState: object}} */
+  const state = getPanelContent();
 
-  if (panelContent) {
-    exportToWindow(panelContent);
+  if (state) {
+    exportToWindow(state);
   } else {
     return 'Cannot retrieve angular state';
   }
 
-  return panelContent;
+  return state.panelState;
 
 
   function getPanelContent() {
@@ -84,25 +85,41 @@ function getPanelContents() {
     }
   }
 
+  /** @returns {state} */
+  function getAngularJsContent(angular) {
+    const originalState = angular.element($0).scope();
+    const panelState = clone(originalState);
+    return {panelState, previousPanelState: clone(panelState), originalState};
+  }
+
+  /** @returns {state} */
   function getAngularContent(ng) {
     const probe = ng.probe($0);
-    const res = clone(probe.componentInstance);
-    addStateProp(res, '$context', probe.context);
-    addStateProp(res, '$debugInfo', probe);
+    const originalState = probe.componentInstance;
+    const panelState = clone(originalState);
+    addStateProp(panelState, '$context', probe.context);
+    addStateProp(panelState, '$debugInfo', probe);
 
-    return res;
+    return {panelState, previousPanelState: clone(panelState), originalState};
   }
 
+  /** @returns {state} */
   function getAngularIvyContent() {
     let el = $0;
-    const res = clone(ng.getOwningComponent(el) || ng.getComponent(el));
-    addStateProp(res, '$context', ng.getContext(el));
-    addStateProp(res, '$directives', ng.getDirectives(el));
-    addStateProp(res, '$listeners', ng.getListeners(el));
+    const originalState = ng.getOwningComponent(el) || ng.getComponent(el);
+    const panelState = clone(originalState);
+    addStateProp(panelState, '$context', ng.getContext(el));
+    addStateProp(panelState, '$directives', ng.getDirectives(el));
+    addStateProp(panelState, '$listeners', ng.getListeners(el));
 
-    return res;
+    return {panelState, previousPanelState: clone(panelState), originalState};
   }
 
+  /**
+   * @param {string} state
+   * @param {string} name
+   * @param {*} value
+   */
   function addStateProp(state, name, value) {
     if (value && Object.keys(value).length) {
       // Properties added with defineProperty are shown in a light red color
@@ -110,26 +127,30 @@ function getPanelContents() {
     }
   }
 
-  function getAngularJsContent(angular) {
-    return clone(angular.element($0).scope());
-  }
-
-  function getDetectChanges(panelContent) {
+  /**
+   * Returns function that runs digest based on angular version.
+   * @returns {function(...[*]=)}
+   */
+  function getDetectChangesFunc() {
     return () => {
       if (isAngularIvy && ng.applyChanges) {
         // Angular 9+
-        ng.applyChanges(ng.getOwningComponent($0) || ng.getComponent($0));
-      } else if (isAngular && panelContent.$debugInfo._debugInfo) {
-        // Angular 2
-        panelContent.$debugInfo._debugInfo._view.changeDetectorRef.detectChanges();
-      } else if (isAngular && ng.coreTokens) {
-        // Angular 4+
-        const ngZone = panelContent.$debugInfo.injector.get(ng.coreTokens.NgZone);
-        ngZone.run(() => {
-          updateComponentState(panelContent);
-        });
+        ng.applyChanges(updateComponentState(state));
+      } else if (isAngular) {
+        if (state.panelState.$debugInfo._debugInfo) {
+          // Angular 2
+          updateComponentState(state);
+          state.panelState.$debugInfo._debugInfo._view.changeDetectorRef.detectChanges();
+        } else if (ng.coreTokens) {
+          // Angular 4+
+          const ngZone = state.panelState.$debugInfo.injector.get(ng.coreTokens.NgZone);
+          ngZone.run(() => {
+            updateComponentState(state);
+          });
+        }
       } else if (isAngularJs && window.angular) {
         try {
+          updateComponentState(state);
           angular.element($0).scope().$applyAsync();
         } catch (e) {
           console.error("Something went wrong. Couldn't run change detection.", e);
@@ -140,14 +161,26 @@ function getPanelContents() {
     }
   }
 
+  /**
+   * Compares previous and current panel state, if something is changed applies it to original state.
+   * @param {state} scope
+   * @returns {object}
+   */
   function updateComponentState(scope) {
-    Object.keys(scope).forEach((prop) => {
-      if (scope[prop] !== scope.$context[prop]) {
-        scope.$context[prop] = scope[prop];
+    Object.keys(scope.originalState).forEach((prop) => {
+      if (scope.previousPanelState[prop] !== scope.panelState[prop]) {
+        scope.previousPanelState[prop] = scope.panelState[prop];
+        scope.originalState[prop] = scope.panelState[prop];
       }
     })
+    return scope.originalState;
   }
 
+  /**
+   * Recursively searches the closest $ctrl property in scope.
+   * @param {object} scope
+   * @returns {null|object}
+   */
   function findCtrl(scope) {
     if (scope && scope.$ctrl) {
       return scope.$ctrl;
@@ -158,18 +191,31 @@ function getPanelContents() {
     }
   }
 
-  function exportToWindow(scope) {
-    if (isAngularJs) {
-      window.$ctrl = findCtrl(scope);
+  /**
+   * Adds shortcuts to window object and prints help message to console.
+   * @param {state} state
+   */
+  function exportToWindow(state) {
+    if (isAngularJs && !window.$ctrl) {
+      Object.defineProperty(window, '$ctrl', {
+        get() {
+          return findCtrl(state.originalState);
+        }
+      })
     }
 
-    ['$state', '$scope', '$context'].forEach(method =>
-      Object.defineProperty(window, method, {
-        get() {
-          return getPanelContent();
-        }
-      }));
-    window.$apply = window.$detectChanges = window.$applyChanges = getDetectChanges(scope);
+    if (!window.$applyChanges) {
+      window.$apply = window.$detectChanges = window.$applyChanges = getDetectChangesFunc();
+    }
+
+    if (!window.$state) {
+      ['$state', '$scope', '$context'].forEach(method =>
+        Object.defineProperty(window, method, {
+          get() {
+            return state.originalState;
+          }
+        }));
+    }
 
     if (window.__shortcutsShown__) return;
     console.log('\n\n');
