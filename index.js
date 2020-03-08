@@ -7,6 +7,12 @@ if (elementsPanel) {
   });
 }
 
+/** @typedef {{
+ *    panelState: object,
+ *    previousPanelState: object,
+ *    originalState: object
+ * }} State */
+
 // The function below is executed in the context of the inspected page.
 function getPanelContents() {
   if (!$0) return;
@@ -15,7 +21,6 @@ function getPanelContents() {
   let isAngularJs = false;
   let isAngularIvy = false;
 
-  /** @typedef {{panelState: object, previousPanelState: object, originalState: object}} */
   const state = getPanelContent();
 
   if (state) {
@@ -27,6 +32,7 @@ function getPanelContents() {
   return state.panelState;
 
 
+  /** @returns {State} */
   function getPanelContent() {
     let _panelContent;
     try {
@@ -85,14 +91,14 @@ function getPanelContents() {
     }
   }
 
-  /** @returns {state} */
+  /** @returns {State} */
   function getAngularJsContent(angular) {
     const originalState = angular.element($0).scope();
     const panelState = clone(originalState);
     return {panelState, previousPanelState: clone(panelState), originalState};
   }
 
-  /** @returns {state} */
+  /** @returns {State} */
   function getAngularContent(ng) {
     const probe = ng.probe($0);
     const originalState = probe.componentInstance;
@@ -103,7 +109,7 @@ function getPanelContents() {
     return {panelState, previousPanelState: clone(panelState), originalState};
   }
 
-  /** @returns {state} */
+  /** @returns {State} */
   function getAngularIvyContent() {
     let el = $0;
     const originalState = ng.getOwningComponent(el) || ng.getComponent(el);
@@ -116,7 +122,7 @@ function getPanelContents() {
   }
 
   /**
-   * @param {string} state
+   * @param {object} state
    * @param {string} name
    * @param {*} value
    */
@@ -133,6 +139,7 @@ function getPanelContents() {
    */
   function getDetectChangesFunc() {
     return () => {
+      const state = stateRef();
       if (isAngularIvy && ng.applyChanges) {
         // Angular 9+
         ng.applyChanges(updateComponentState(state));
@@ -163,7 +170,7 @@ function getPanelContents() {
 
   /**
    * Compares previous and current panel state, if something is changed applies it to original state.
-   * @param {state} scope
+   * @param {State} scope
    * @returns {object}
    */
   function updateComponentState(scope) {
@@ -191,15 +198,19 @@ function getPanelContents() {
     }
   }
 
-  /**
-   * Adds shortcuts to window object and prints help message to console.
-   * @param {state} state
-   */
-  function exportToWindow(state) {
+  /** @returns {State} */
+  function stateRef() {
+    return window.__ngState__;
+  }
+
+  /** Adds shortcuts to window object and prints help message to console. */
+  function exportToWindow() {
+    window.__ngState__ = state;
+
     if (isAngularJs && !window.$ctrl) {
       Object.defineProperty(window, '$ctrl', {
         get() {
-          return findCtrl(state.originalState);
+          return findCtrl(stateRef().originalState);
         }
       })
     }
@@ -212,7 +223,7 @@ function getPanelContents() {
       ['$state', '$scope', '$context'].forEach(method =>
         Object.defineProperty(window, method, {
           get() {
-            return state.originalState;
+            return stateRef().originalState;
           }
         }));
     }
