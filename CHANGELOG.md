@@ -1,3 +1,6 @@
+### Version 1.4.3:
+ - Return result emoji on `$apply()` call
+
 ### Version 1.4.2:
  - Fixed props editing and change detection
 

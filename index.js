@@ -139,32 +139,36 @@ function getPanelContents() {
    */
   function getDetectChangesFunc() {
     return () => {
+      let result = 0x1F44D;
       const state = stateRef();
-      if (isAngularIvy && ng.applyChanges) {
-        // Angular 9+
-        ng.applyChanges(updateComponentState(state));
-      } else if (isAngular) {
-        if (state.panelState.$debugInfo._debugInfo) {
-          // Angular 2
-          updateComponentState(state);
-          state.panelState.$debugInfo._debugInfo._view.changeDetectorRef.detectChanges();
-        } else if (ng.coreTokens) {
-          // Angular 4+
-          const ngZone = state.panelState.$debugInfo.injector.get(ng.coreTokens.NgZone);
-          ngZone.run(() => {
+      try {
+        if (isAngularIvy && ng.applyChanges) {
+          // Angular 9+
+          ng.applyChanges(updateComponentState(state));
+        } else if (isAngular) {
+          if (state.panelState.$debugInfo._debugInfo) {
+            // Angular 2
             updateComponentState(state);
-          });
-        }
-      } else if (isAngularJs && window.angular) {
-        try {
+            state.panelState.$debugInfo._debugInfo._view.changeDetectorRef.detectChanges();
+          } else if (ng.coreTokens) {
+            // Angular 4+
+            const ngZone = state.panelState.$debugInfo.injector.get(ng.coreTokens.NgZone);
+            ngZone.run(() => {
+              updateComponentState(state);
+            });
+          }
+        } else if (isAngularJs && window.angular) {
           updateComponentState(state);
           angular.element($0).scope().$applyAsync();
-        } catch (e) {
-          console.error("Something went wrong. Couldn't run change detection.", e);
+        } else {
+          console.error("Couldn't find change detection api.");
+          result = 0x1F44E;
         }
-      } else {
-        console.error("Couldn't find change detection api.");
+      } catch (e) {
+        console.error("Something went wrong. Couldn't run change detection.", e);
+        result = 0x1F44E;
       }
+      return String.fromCodePoint(result);
     }
   }
 
