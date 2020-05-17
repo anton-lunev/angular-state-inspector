@@ -1,3 +1,9 @@
+### Version 1.4.5:
+ - [ivy] Show info from ng.getComponent(). If it's null then show OwningComponent state.
+
+### Version 1.4.4:
+ - update extension logo
+
 ### Version 1.4.3:
  - Return result emoji on `$apply()` call
 

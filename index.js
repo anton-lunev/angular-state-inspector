@@ -112,8 +112,13 @@ function getPanelContents() {
   /** @returns {State} */
   function getAngularIvyContent() {
     let el = $0;
-    const originalState = ng.getOwningComponent(el) || ng.getComponent(el);
+    const owningComponent = ng.getOwningComponent(el);
+    const originalState = ng.getComponent(el) || owningComponent;
     const panelState = clone(originalState);
+
+    if (owningComponent !== originalState) {
+      addStateProp(panelState, '$owningComponent', owningComponent);
+    }
     addStateProp(panelState, '$context', ng.getContext(el));
     addStateProp(panelState, '$directives', ng.getDirectives(el));
     addStateProp(panelState, '$listeners', ng.getListeners(el));
