@@ -17,7 +17,7 @@
   },
   "homepage": "https://github.com/anton-lunev/angular-state-inspector#readme",
   "devDependencies": {
-    "bestzip": "^2.1.5",
+    "bestzip": "^2.1.7",
     "rimraf": "^3.0.2"
   }
 }
