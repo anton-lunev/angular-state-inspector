@@ -5,4 +5,6 @@ Chrome: https://chrome.google.com/webstore/detail/angular-state-inspector/nelkod
 
 Firefox: https://addons.mozilla.org/en-US/firefox/addon/angular_state_inspector/
 
+Edge: https://microsoftedge.microsoft.com/addons/detail/angular-state-inspector/obfnbeenaokodmfahnfejnnalpeonijl?hl=en-US
+
 ![screenshot](./img/screenshots/chrome_1.png)
