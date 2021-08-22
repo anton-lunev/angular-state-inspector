@@ -7,11 +7,13 @@ if (elementsPanel) {
   });
 }
 
-/** @typedef {{
+/**
+ * @typedef {{
  *    panelState: object,
  *    previousPanelState: object,
  *    originalState: object
- * }} State */
+ * }} State
+ */
 
 // The function below is executed in the context of the inspected page.
 function getPanelContents() {
@@ -26,7 +28,9 @@ function getPanelContents() {
   if (state) {
     exportToWindow(state);
   } else {
-    return 'Cannot retrieve angular state';
+    const message = 'Cannot retrieve angular state';
+    updateState({originalState: message});
+    return message;
   }
 
   return state.panelState;
@@ -195,7 +199,7 @@ function getPanelContents() {
   /**
    * Recursively searches the closest $ctrl property in scope.
    * @param {object} scope
-   * @returns {null|object}
+   * @returns {string|object}
    */
   function findCtrl(scope) {
     if (scope && scope.$ctrl) {
@@ -203,7 +207,8 @@ function getPanelContents() {
     } else if (scope && scope.$parent) {
       return findCtrl(scope.$parent);
     } else {
-      return null;
+      return '$ctrl is not found. Component or directive with controllerAs might not used in selected scope. ' +
+          'See https://docs.angularjs.org/guide/component';
     }
   }
 
@@ -212,9 +217,14 @@ function getPanelContents() {
     return window.__ngState__;
   }
 
+  /** Updates state reference. */
+  function updateState(state) {
+    window.__ngState__ = state;
+  }
+
   /** Adds shortcuts to window object and prints help message to console. */
   function exportToWindow() {
-    window.__ngState__ = state;
+    updateState(state);
 
     if (isAngularJs && !window.$ctrl) {
       Object.defineProperty(window, '$ctrl', {
