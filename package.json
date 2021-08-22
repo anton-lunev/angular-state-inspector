@@ -4,7 +4,8 @@
   "description": "An extension that lets you inspect the state of components.",
   "main": "index.js",
   "scripts": {
-    "zip": "mkdir -p dist && rimraf dist/* && bestzip dist/bundle.zip index.js index.html manifest.json img/icons/*"
+    "zip": "bestzip dist/bundle.zip index.js index.html manifest.json img/icons/*",
+    "cleand-and-zip": "mkdir -p dist && rimraf dist/* && npm run zip"
   },
   "repository": {
     "type": "git",

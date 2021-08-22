@@ -1,3 +1,7 @@
+### Version 1.4.6:
+- Show info message if $ctrl is not available in selected scope.
+- Update $state object even if it's not available.
+
 ### Version 1.4.5:
  - [ivy] Show info from ng.getComponent(). If it's null then show OwningComponent state.
 
